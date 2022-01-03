@@ -1,22 +1,31 @@
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <vector>
 #include <string>
+#include <unordered_set>
 
 using namespace std;
 
 vector<vector<int>> getIntSequence(int i) {
     int number;
     string input;
+    unordered_set<int> vector1;
     vector<vector<int>> v(i, vector<int>());
 
     getline(cin, input);
     for(int j = 0; j < i; j++) {
         getline(cin, input);
         stringstream stream(input);
-
         while (stream >> number) {
-            v[j].push_back(number);
+            if (j == 1) {
+                if (vector1.find(number) != vector1.end()) {
+                    v[j].push_back(number);
+                }
+            } else {
+                v[j].push_back(number);
+                vector1.insert(number);
+            }
         }
     }
 
@@ -29,30 +38,72 @@ vector<int> lis(vector<int> v) {
     size_t n = v.size();
     vector<int> s(n, 1);
     vector<int> c(n, 1);
-    int max = 1, count;
+
+    vector<int> max_i(1, 0); 
+    vector<int> max_val(1, v[0]);
+    vector<int> max_i_temp(1, 0);
+    vector<int> max_val_temp(1, 0);
+    int max = 1; 
+    int count = 0;
+    bool continued_from_max;
+    bool set_max;
 
     for (size_t i = 1; i < n; i++) {
-        for (size_t j = 0; j < i; j++) {
-            if (v[j] < v[i]) {
-                if (s[i] < 1 + s[j]) {
-                    s[i] = 1 + s[j];
-                    c[i] = c[j];
+        continued_from_max = false;
+        set_max = false;
+        max_i_temp.clear();
+        max_val_temp.clear();
+        for (size_t j = 0; j < max_val.size(); j++) {
+            if (max_val[j] < v[i]) {
+                continued_from_max = true;
+                if (s[i] < 1 + s[max_i[j]]) {
+                    s[i] = 1 + s[max_i[j]];
+                    c[i] = c[max_i[j]];
                     if (s[i] > max) {
                         max = s[i];
-                        count = 0;
+                        max_i_temp.push_back(i);
+                        max_val_temp.push_back(v[i]);
+                        set_max = true;
                     }
                 }
-                else if (s[i] == 1 + s[j]) {
-                    c[i] += c[j];
+                else if (s[i] == 1 + s[max_i[j]]) {
+                    c[i] += c[max_i[j]];
                 }
-            } 
+            }
+        }
+        if (continued_from_max) {
+            max_i = max_i_temp;
+            max_val = max_val_temp;
+        }
+        else {
+            for (size_t j = 0; j < i; j++) {
+                if (v[j] < v[i]) {
+                    if (s[i] < 1 + s[j]) {
+                        s[i] = 1 + s[j];
+                        c[i] = c[j];
+                        if (s[i] > max) {
+                            max = s[i];
+                            max_i.clear();
+                            max_val.clear();
+                            max_i.push_back(i);
+                            max_val.push_back(v[i]);
+                            set_max = true;
+                        }
+                    }
+                    else if (s[i] == 1 + s[j]) {
+                        c[i] += c[j];
+                    }
+                } 
+            }
+            if (s[i] == max && !set_max) {
+                max_i.push_back(i);
+                max_val.push_back(v[i]);
+            }
         }
     }
 
-    for (size_t i = 0; i < n; i++) {
-        if(s[i] == max) {
-            count += c[i];
-        }
+    for (size_t i = 0; i < max_i.size(); i++) {
+        count += c[max_i[i]];
     }
 
     return {max, count};
@@ -60,39 +111,30 @@ vector<int> lis(vector<int> v) {
 
 int lics(vector<int> v1, vector<int> v2) {
     size_t i, j, n = v1.size(), m = v2.size();
-    vector<vector<int>> s(n+1, vector<int>(m+1, 0));
+    vector<int> s(m, 0);
     
-    for (i = 1; i <= n; i++) {
+    for (i = 0; i < n; i++) {
         int current_sequence = 0;
-        for (j = 1; j <= m; j++) {
-            if (v1[i-1] == v2[j-1]) {
-                if (current_sequence + 1 > s[i-1][j]) {
-                    s[i][j] = current_sequence + 1;
-                } else {
-                    s[i][j] = s[i-1][j];
-                }
-            } else if (v1[i-1] > v2[j-1]) {
-                if (s[i-1][j] > current_sequence) {
-                    current_sequence = s[i-1][j];
-                }
-                s[i][j] = s[i-1][j];
-            } else {
-                s[i][j] = s[i-1][j];
+        for (j = 0; j < m; j++) {
+            if (v1[i] == v2[j]) {
+                if (current_sequence + 1 > s[j])
+                    s[j] = current_sequence + 1;
+            } else if (v1[i] > v2[j]) {
+                if (s[j] > current_sequence)
+                    current_sequence = s[j];
             }
         }
     }
     int length = 0;
-    i = n;
-    for (j = 0; j <= m; j++) {
-        if (s[i][j] > length)
-            length = s[i][j];
+    for (i = 0; i < m; i++) {
+        if (s[i] > length)
+            length = s[i];
     }
     return length;
 }
 
 int main() {
     int i;
-    string input;
     vector<vector<int>> intSequence;
 
     cin >> i;
